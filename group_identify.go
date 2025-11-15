@@ -15,8 +15,8 @@ type GroupIdentify struct {
 	DisableGeoIP bool
 }
 
-func (msg GroupIdentify) internal() {
-	panic(unimplementedError)
+func (msg GroupIdentify) get_type() string {
+	return msg.Type
 }
 
 func (msg GroupIdentify) Validate() error {

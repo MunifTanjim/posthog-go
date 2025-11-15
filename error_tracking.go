@@ -69,7 +69,9 @@ type ExceptionInApiProperties struct {
 	ExceptionFingerprint *string         `json:"$exception_fingerprint,omitempty"`
 }
 
-func (msg Exception) internal() { panic(unimplementedError) }
+func (msg Exception) get_type() string {
+	return "exception"
+}
 
 func (msg Exception) Validate() error {
 	if len(msg.DistinctId) == 0 {

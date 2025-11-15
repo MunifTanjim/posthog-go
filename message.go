@@ -38,8 +38,8 @@ type Message interface {
 	Validate() error
 	APIfy() APIMessage
 
-	// internal is an unexposed interface function to ensure only types defined within this package can satisfy the Message interface. Invoking this method will panic.
-	internal()
+	// get_type is an unexposed interface function to ensure only types defined within this package can satisfy the Message interface.
+	get_type() string
 }
 
 // Returns the time value passed as first argument, unless it's the zero-value,

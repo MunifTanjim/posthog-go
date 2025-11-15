@@ -88,7 +88,8 @@ var _ Message = (*testErrorMessage)(nil)
 type testErrorMessage struct{}
 type testAPIErrorMessage struct{}
 
-func (m testErrorMessage) internal() {
+func (m testErrorMessage) get_type() string {
+	return ""
 }
 
 func (m testErrorMessage) Validate() error { return testError }
@@ -471,7 +472,8 @@ type customMessage struct {
 type customAPIMessage struct {
 }
 
-func (c *customMessage) internal() {
+func (c *customMessage) get_type() string {
+	return ""
 }
 
 func (c *customMessage) Validate() error {
