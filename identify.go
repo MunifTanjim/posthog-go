@@ -16,8 +16,8 @@ type Identify struct {
 	DisableGeoIP bool
 }
 
-func (msg Identify) internal() {
-	panic(unimplementedError)
+func (msg Identify) get_type() string {
+	return "identify"
 }
 
 func (msg Identify) Validate() error {

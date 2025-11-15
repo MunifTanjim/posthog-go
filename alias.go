@@ -16,8 +16,8 @@ type Alias struct {
 	DisableGeoIP bool
 }
 
-func (msg Alias) internal() {
-	panic(unimplementedError)
+func (msg Alias) get_type() string {
+	return "alias"
 }
 
 func (msg Alias) Validate() error {

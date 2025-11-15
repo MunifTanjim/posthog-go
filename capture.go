@@ -81,8 +81,8 @@ type Capture struct {
 	SendFeatureFlags SendFeatureFlagsValue
 }
 
-func (msg Capture) internal() {
-	panic(unimplementedError)
+func (msg Capture) get_type() string {
+	return "capture"
 }
 
 func (msg Capture) Validate() error {

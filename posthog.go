@@ -22,6 +22,8 @@ const (
 	propertyGeoipDisable = "$geoip_disable"
 )
 
+type BeforeSend func(msg Message) Message
+
 type EnqueueClient interface {
 	// Enqueue queues a message to be sent by the client when the conditions for a batch
 	// upload are met.
@@ -73,6 +75,10 @@ type Client interface {
 
 	// GetLastCapturedEvent returns the last captured event
 	GetLastCapturedEvent() *Capture
+
+	// A function called immediately before sending each message to the server.
+	// It allows you to modify the message, or drop it by returning nil.
+	BeforeSend(BeforeSend)
 }
 
 type client struct {
@@ -100,6 +106,8 @@ type client struct {
 	featureFlagsPoller *FeatureFlagsPoller
 
 	distinctIdsFeatureFlagsReported *lru.Cache[flagUser, struct{}]
+
+	beforeSend []BeforeSend
 
 	// Last captured event
 	lastCapturedEvent *Capture
@@ -147,6 +155,7 @@ func NewWithConfig(apiKey string, config Config) (cli Client, err error) {
 		shutdown:                        make(chan struct{}),
 		http:                            makeHttpClient(config.Transport),
 		distinctIdsFeatureFlagsReported: reportedCache,
+		beforeSend:                      []BeforeSend{},
 	}
 
 	c.decider, err = newFlagsClient(apiKey, config.Endpoint, c.http, config.FeatureFlagRequestTimeout, c.Logger)
@@ -220,6 +229,10 @@ func dereferenceMessage(msg Message) Message {
 	return msg
 }
 
+func (c *client) BeforeSend(fn BeforeSend) {
+	c.beforeSend = append(c.beforeSend, fn)
+}
+
 func (c *client) Enqueue(msg Message) (err error) {
 	msg = dereferenceMessage(msg)
 	if err = msg.Validate(); err != nil {
@@ -230,13 +243,13 @@ func (c *client) Enqueue(msg Message) (err error) {
 
 	switch m := msg.(type) {
 	case Alias:
-		m.Type = "alias"
+		m.Type = m.get_type()
 		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		m.DisableGeoIP = c.GetDisableGeoIP()
 		msg = m
 
 	case Identify:
-		m.Type = "identify"
+		m.Type = m.get_type()
 		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		m.DisableGeoIP = c.GetDisableGeoIP()
 		msg = m
@@ -247,7 +260,7 @@ func (c *client) Enqueue(msg Message) (err error) {
 		msg = m
 
 	case Capture:
-		m.Type = "capture"
+		m.Type = m.get_type()
 		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		if m.shouldSendFeatureFlags() {
 			// Add all feature variants to event
@@ -295,7 +308,7 @@ func (c *client) Enqueue(msg Message) (err error) {
 		msg = m
 
 	case Exception:
-		m.Type = "exception"
+		m.Type = m.get_type()
 		m.Timestamp = makeTimestamp(m.Timestamp, ts)
 		m.DisableGeoIP = c.GetDisableGeoIP()
 		msg = m
@@ -314,6 +327,12 @@ func (c *client) Enqueue(msg Message) (err error) {
 			err = ErrClosed
 		}
 	}()
+
+	for _, beforeSend := range c.beforeSend {
+		if m := beforeSend(msg); m == nil {
+			return
+		}
+	}
 
 	c.msgs <- msg.APIfy()
 
